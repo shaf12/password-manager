@@ -1,10 +1,5 @@
 IDEAL
 
-Macro ROL_DES ofst ;28 bit 
-	mov bx, ofst
-	mov bh, [byte ptr bx]
-	
-Endm
 MODEL small
 STACK 100h
 DATASEG
@@ -45,16 +40,16 @@ DATASEG
 	33,  1, 41, 9, 49, 17, 57, 25, 
 	32,  0, 40,  8, 48, 16, 56, 24
 
-	pc_1 db 
+	PC_1 db 
 	56, 48, 40, 32, 24, 16,  8,  0, 
 	57, 49, 41, 33, 25, 17,  9,  1, 
 	58, 50, 42, 34, 26, 18, 10,  2, 
 	59, 51, 43, 35, 62, 54, 46, 38, 
 	30, 22, 14,  6, 61, 53, 45, 37, 
 	29, 21, 13,  5, 60, 52, 44, 36, 
-	28, 20, 12,4, 27, 19, 11,  3
+	28, 20, 12,  4, 27, 19, 11,  3
 
-	pc_2 db 
+	PC_2 db 
 	13, 16, 10, 23,  0,  4,  2, 27, 
 	14,  5, 20,  9, 22, 18, 11,  3, 
 	25,  7, 15,  6, 26, 19, 12,  1, 
@@ -104,18 +99,63 @@ DATASEG
 	2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11
 	
 	SHIFT db 1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1 ;to determine whether we need to shift once or twice(round 1 = [SHIFT+0], 2 = [SHIFT+1].... round 16 = [SHIFT+15])
+	ROLmap db 28, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 56, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55
 
-	Key db 1,2,3,4,5,6,7 ; 56 bit
 	
-	TEXT_LEN = 64 ;bit
+	DES_Key db 1,2,3,4,5,6,7,8 ; 64 bit
 	
-	Text db TEXT_LEN/8 dup (0) ;text
+	KeyTemp1 db 7 dup(?) ; allocate 56bit(7bytes) for the permuted key
+	KeyTemp2 db 7 dup(?) ; allocate 56bit(7bytes) for the permuted key
+
+	SubKey1 db 6 dup (?)
+	SubKey2 db 6 dup (?)
+	SubKey3 db 6 dup (?)
+	SubKey4 db 6 dup (?)
+	SubKey5 db 6 dup (?)
+	SubKey6 db 6 dup (?)
+	SubKey7 db 6 dup (?)
+	SubKey8 db 6 dup (?)
+	SubKey9 db 6 dup (?)
+	SubKey10 db 6 dup (?)
+	SubKey11 db 6 dup (?)
+	SubKey12 db 6 dup (?)
+	SubKey13 db 6 dup (?)
+	SubKey14 db 6 dup (?)
+	SubKey15 db 6 dup (?)
+	SubKey16 db 6 dup (?)
 	
+	TextBlock db 8 dup (?) ;text
 	
+	MapMask1 db 1h, 2h, 4h, 8h, 10h, 20h, 40h, 80h ;masks to isolate the bits(1st - 8th) - AND with the mask
+	MapMask2	db 0FEh, 0FDh, 0FB, 0F7h, 0EFh, 0DFh, 0BFh, 07Fh ;masks to clear a bit(1st - 8th) - AND with the mask
 	
+	gw_bit db ? ;The bit we read/need to write
+	g_address dw ?
+	w_address dw ?
+	gw_bits db ? ;Num of bit
 	
+	isEnc db ? ; 1 = Encrypt, 0 = Decrypt
 	
+	OutputBlock db 8 dup(?)
 	
+	;------------- f function variables -------------
+	e_temp db 6 dup (?)
+	s_temp2 db 4 dup (?)
+	f_temp db 4 dup (?)
+	;--------------------------------------------
+	
+	;------------- SBox algorithm variables -------------
+	s_temp db ?
+	s_line db ?
+	s_col db ?
+	s_idx dw ?
+	;----------------------------------------------------
+	;------------- Feistel network variables -------------
+	n_var db 8 dup (?)
+	n_temp db 8 dup (?)
+	n_round db 0
+	;-----------------------------------------------------
+
 	
 ; End DES DATA
 ; ------------------------------------------
@@ -129,39 +169,336 @@ exit:
 	mov ax, 4c00h
 	int 21h
 
-	
-proc DES_Encrypt
+
+;------------------------------------------------
+;INPUT:
+;	isEnc =>  1 = Encrypt, 0 = Decrypt
+;OUTPUT:
+;	
+;------------------------------------------------
+proc DES
 	 
 
 
 
 
 	ret
-endp DES_Encrypt
-
-
-
-
-proc DES_Decrypt
-
-
-	ret
-endp DES_Decrypt
+endp DES
 	
 
 	
-	
+;Generate all the 16 keys into [SubKiBuff]
 proc GenerateKeys
 	
 	
 	ret
 endp GenerateKeys
 
+;----------------------------------
+;Generate K+ by PC_1
+;Key should be in [DES_Key]
+;----------------------------------
+proc GeneratePlusByPC1
+	push cx
+	push si
+	push di
+	
+	xor si, si
+	xor di, di
+	mov cx, 56
+	
+	
+	pop di
+	pop si
+	pop cx
+	ret
+endp GeneratePlusByPC1
 
 
+;------------------------------------------------------------------------------------------------
+;GET / WRITE BIT PROCS
+;------------------------------------------------------------------------------------------------
+PROC get
+	push ax
+	push cx
+	push si
+	push di
+	mov ax, [gw_bits]
+	mov cl, 8
+	div cl
+	push ax
+	cbw 
+	mov si, ax ;si now stores the offset in bytes
+	pop ax
+	shr ax, 8
+	mov di, ax ;di now stores the bit offset
+	mov bx, [g_address]
+	mov al, [byte ptr bx + si] 
+	and al, [MapMask1 + di]
+	mov cx, di
+	shr al, cl
+	mov [gw_bit], al
+	pop di
+	pop si
+	pop cx
+	pop ax
+	ret
+ENDP get
+
+PROC writep ;writes the bit which is in gw_bit in the bit position specified by w_address (address) and gw_bits (index in bits after the address).
+	push ax
+	push cx
+	push si
+	push di
+	mov ax, [gw_bits]
+	mov cl, 8
+	div cl
+	push ax
+	cbw 
+	mov si, ax ;si now stores the offset in bytes
+	pop ax
+	shr ax, 8
+	mov di, ax ;di now stores the bit offset and the number of times to shift right
+	mov bx, [w_address]
+	mov al, [byte ptr bx + si] 
+	cmp [gw_bit], 0
+	je w_zero
+		or al, [MapMask1 + di]
+		mov [bx + si], al
+		jmp w_exit		
+	w_zero:
+		and al, [MapMask2 + di]
+		mov [bx + si], al		
+	w_exit:
+		pop di
+		pop si
+		pop cx
+		pop ax
+		ret
+ENDP writep
+
+MACRO load g_add, w_add
+	lea bx, [g_add]
+	mov [g_address], bx
+	lea bx, [w_add]
+	mov [w_address], bx
+ENDM load
+
+MACRO perm from, to, reg, map, mapLen
+	local Loop
+	load from, to
+	xor reg, reg
+	xor ax, ax
+	Loop:
+		mov al, [map + reg]
+		dec ax
+		mov [gw_bits], ax
+		call get
+		mov [gw_bits], reg
+		call writep
+		inc reg
+		cmp reg, mapLen
+		jl Loop
+ENDM perm
+
+;------------------------------------------------------------------------------------------------
+;								KEY SCHEDULE PROCS AND MACROS
+;------------------------------------------------------------------------------------------------
+PROC DRL ;DES ROL
+	pusha
+	perm KeyTemp1, KeyTemp2, di, ROLmap, 56
+	mov ax, [word ptr KeyTemp2 + 0]
+	mov [word ptr KeyTemp1 + 0], ax
+	mov ax, [word ptr KeyTemp2 + 2]
+	mov [word ptr KeyTemp1 + 2], ax
+	mov ax, [word ptr KeyTemp2 + 4]
+	mov [word ptr KeyTemp1 + 4], ax
+	mov al, [byte ptr KeyTemp2 + 6]
+	mov [byte ptr KeyTemp1 + 6], al
+	popa
+	ret
+ENDP DRL
+
+PROC KS
+		perm Key, KeyTemp1, si, PC_1, 56
+	xor si, si
+	KLoop:
+		call DRL
+		cmp [SHIFT + si], 2
+		jne KCont
+		call DRL
+	KCont:
+		lea bx, [KeyTemp1]
+		mov [g_address], bx
+		mov ax, si
+		push cx
+		mov cx, 6 ;bytes size of each sub key
+		mul cx
+		pop cx
+		lea bx, [SubKey1]
+		add ax, bx
+		mov [w_address], ax
+		xor di, di
+		PC2Loop:
+			xor ax, ax
+			mov al, [PC_2 + di]
+			dec ax
+			mov [gw_bits], ax
+			call get
+			mov [gw_bits], di
+			call writep
+			inc di
+			cmp di, 48
+			jl PC2Loop
+		inc si
+		cmp si, 16
+		jl KLoop
+	ret
+ENDP KS
 
 
-
+;------------------------------------------------------------------------------------------------
+;										f Function Procs and Macros
+;------------------------------------------------------------------------------------------------
+PROC STLP ;sbox temp loop proc
+	xor di, di
+	STLoop:
+		mov ax, si
+		mov cx, 6
+		mul cl
+		add ax, di
+		mov [gw_bits], ax
+		call get
+		mov [gw_bits], di
+		call writep
+		inc di
+		cmp di, 6
+		jne STLoop
+	ret
+ENDP STLP
+PROC SWLP ;sbox write loop proc
+	xor di, di
+	SWLoop:
+		mov [gw_bits], di
+		call get
+		mov ax, si
+		mov cx, 4
+		mul cl
+		add ax, di
+		mov [gw_bits], ax
+		call writep
+		inc di
+		cmp di, 4
+		jne SWLoop
+	ret
+ENDP SWLP
+PROC s_cidx ;Get the exact offset in the SBoxes by column and row
+	xor ax, ax
+	mov al, [s_col]
+	mov [s_idx], ax
+	mov al, [s_line]
+	mov cl, 10h
+	mul cl
+	add [s_idx], ax
+	mov ax, si
+	mov cx, 40h
+	mul cl
+	add [s_idx], ax
+	ret
+ENDP s_cidx
+PROC f_xor ;xors the expanded r with the subkey according to crntKN and enc boolean
+		cmp [enc], 1
+		jne f_dec
+		xor ax, ax
+		mov al, [crntKN]
+		mov cx, 8
+		mul cx
+		lea bx, [subKey01]
+		add bx, ax
+		jmp f_cont
+	f_dec:
+		xor ax, ax
+		mov al, [crntKN]
+		mov cx, 8
+		mul cx
+		lea bx, [subKey16]
+		sub bx, ax
+	f_cont:
+		mov ax, [bx]
+		xor [word ptr e_temp], ax
+		mov ax, [bx + 2]
+		xor [word ptr e_temp + 2], ax
+		mov ax, [bx + 4]
+		xor [word ptr e_temp + 4], ax
+		ret
+ENDP f_xor
+PROC f_func ;Performs the f function to the 32 bits the address of which is in bx using the key the number of which is specified by crntKN
+	pusha
+	;------------- Expansion using E and xor -------------
+		mov [g_address], bx
+		lea bx, [e_temp]
+		mov [w_address], bx
+		xor si, si
+		xor ax, ax
+	ELoop:
+		mov al, [E + si]
+		dec ax
+		mov [gw_bits], ax
+		call get
+		mov [gw_bits], si
+		call writep
+		inc si
+		cmp si, 48d
+		jl ELoop
+		call f_xor
+	;------------- sBoxes -------------
+		xor si, si ;sbox iteration number
+	SLoop:
+		load e_temp, s_temp
+		call STLP ;sbox temp loop proc
+		xor ax, ax
+		mov al, [s_temp]
+		push ax
+		and al, 00100001b
+		mov cl, 10h
+		div cl
+		add al, ah
+		cbw
+		mov [s_line], al
+		pop ax
+		shr al, 1
+		and al, 00001111b ;get the 4 middle in the 6 bits block
+		mov [s_col], al
+		;now we have the line in s_line, the column in s_col and the table number is si + 1.
+		call s_cidx
+		mov di, [s_idx]
+		mov al, [s1 + di]
+		mov [s_temp], al
+		load s_temp, s_temp2
+		call SWLP ;sbox write loop proc
+		inc si
+		cmp si, 8
+		jne SLoop
+	;------------- Permutation using P -------------
+		load s_temp2, f_temp
+		xor si, si
+		xor ax, ax
+	PLoop:
+		mov al, [P + si]
+		dec ax
+		mov [gw_bits], ax
+		call get
+		mov [gw_bits], si
+		call writep
+		inc si
+		cmp si, 20h ;32d
+		jl PLoop
+	popa
+	ret
+ENDP f_func
+;------------------------------------------------------------------------------------------------
+;									DES and f Function Procs
+;------------------------------------------------------------------------------------------------
 
 
 	
