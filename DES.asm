@@ -157,6 +157,19 @@ start:
 	mov [isEnc], 1
 	call KS
 	call DES
+	
+	mov ax, [word OutputBlock]
+	mov [word TextBlock], ax
+	mov ax, [word OutputBlock+2]
+	mov [word TextBlock+2], ax
+	mov ax, [word OutputBlock+4]
+	mov [word TextBlock+4], ax
+	mov ax, [word OutputBlock+6]
+	mov [word TextBlock+6], ax
+	
+	mov [isEnc], 0
+	call KS
+	call DES
 
 exit: 
 	mov ax, 4c00h
