@@ -1,2 +1,2 @@
 # Password-Manager
-Assembly 8086 password manager
+Assembly 16-bit password manager
