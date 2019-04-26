@@ -58,6 +58,7 @@ MACRO ROR32
 ENDM
 
 STACK 100h
+include "util.inc"
 DATASEG
 
 h0 dd 0
@@ -80,121 +81,198 @@ InputLen dw ? ;length of the input in bits
 msg dw ?
 CurrBlock dw ?
 Blocks dw ?
-db 0FFh
-db 0FFh
-db 0FFh
-msgToHash db 32 dup ('A','B','C','D');,'E'), '$'
-msgToHash2 db 2 dup ('A','B','C','D','E'), '$'
+msgToHash db 96 dup (?);,'E'), '$'
 msgHash db OUTPUT_LEN/8 dup(0), '$'
 WorkBuff db 64 dup (?), 256 dup(?)
 BLOCK_SIZE = 64 ;bytes
-KEY_LEN = 10 ;bytes
-Key db KEY_LEN dup (?)
-KeyPad db BLOCK_SIZE - KEY_LEN dup(?)
-oKeyPad db 64 dup (?)
-iKeyPad db 64 dup (1)
 
+;-------------------HMAC KEY--------------------------------------
+;Key db KEY_LEN dup (?)
+Key db 30h, 30h, 30h, 30h, 30h, 30h, 30h, 30h, 30h, 30h
+KeyPad db BLOCK_SIZE dup(?) ;MAX PAD POSSIBLE
+HKeyLen db ? ;bytes
+oKeyPad db BLOCK_SIZE dup (?)
+iKeyPad db BLOCK_SIZE dup (?)
+oPadXor db BLOCK_SIZE dup (5Ch)
+iPadXor db BLOCK_SIZE dup (36h)
+HmacMsgOffset dw ? ;offset to msg
+;HmacMsg db 4 dup (?)
+HmacMsg db "ABCD"
+HmacMsgLen db ? ;in bytes!!!
 CODESEG
 
 start:
     mov ax, @data
     mov ds, ax
     
-    lea bx, [msgToHash]
-    mov [msg], bx
-    lea bx, [iKeyPad]
-    mov [InputLen], 1024
-    call SHA1_Hash
-    lea bx, [WorkBuff]
+    call EpochTimeDiv30
+    
+    lea bx, [Key]
+    lea bx, [HmacMsgOffset]
+    lea bx, [HKeyLen]
+    
+    mov [HKeyLen], 10
+    mov [HmacMsgLen], 4
+    lea bx, [HmacMsg]
+    mov [HmacMsgOffset], bx
+    call HMAC_SHA1
     lea dx, [msgHash]
-    mov ah, 9
-    int 21h
 
     
     
 exit: 
     mov ax, 4c00h
     int 21h
-    
-; ;-----------------------------------------------------
-; ;Key length must be less than BLOCK_SIZE(64bytes for SHA-1)
-; ;-----------------------------------------------------    
-; proc HMAC_SHA1
-    ; ; cmp KEY_LEN, BLOCK_SIZE
-    ; ; jna @@cont1
-    ; ; xor si, si
-    ; ; mov cx, KEY_LEN
-; ; @@CopyFromKey:
-    ; ; mov ax, [Key+si]
-    ; ; mov [msg+si], ax
-    ; ; inc si
-    ; ; loop @@CopyFromKey
-    
-    ; ; SHA1_Hash
 
-    ; ; mov cx,
-; ; @@CopyToKey:
-
-; ;@@cont1:
+;---------------------------------------------------------------------------------------
+;Input: Key = secret 10bytes key
+;
+;
+;
+;---------------------------------------------------------------------------------------
+proc GoogleAuthenticator
+    
+    
+    
+    
+    
+    ret
+endp GoogleAuthenticator    
+    
+    
+    
+;------------------------------------------------------------------------
+;Key length must be less than BLOCK_SIZE(64bytes for SHA-1)
+;HmacMsgOffset = offset to the message
+;HmacMsgLen = length of the message
+;BLOCK_SIZE = 64
+;Key = key
+;KEY_LEN = key length
+;oKeyPad db 64 dup (?)
+;iKeyPad db 64 dup (?)
+;------------------------------------------------------------------------
+proc HMAC_SHA1
     ; cmp KEY_LEN, BLOCK_SIZE
-    ; jnb @@cont
+    ; jna @@cont1
     ; xor si, si
-    ; mov cx, BLOCK_SIZE-KEY_LEN
-; @@PadZeros:
-    ; mov [KeyPad+si], 0
-    ; inc si
-    ; loop @@PadZeros
-    
-; @@cont:
-    ; xor si, si
-    ; mov cx, 64
+    ; mov cx, KEY_LEN
 ; @@CopyFromKey:
     ; mov ax, [Key+si]
-    ; mov [oKeyPad+si], ax
+    ; mov [msg+si], ax
     ; inc si
     ; loop @@CopyFromKey
-    ; xor si, si
-    ; mov cx, 64
-; @@CopyFromKey:
-    ; mov ax, [Key+si]
-    ; mov [iKeyPad+si], ax
-    ; inc si
-    ; loop @@CopyFromKey
+    
+    ; SHA1_Hash
+
+    ; mov cx,
+; @@CopyToKey:
+
+;@@cont1:
+    cmp [HKeyLen], BLOCK_SIZE
+    jnb @@cont
+    xor si, si
+    mov cl, BLOCK_SIZE
+    sub cl, [HKeyLen]
+    xor ch, ch
+@@PadZeros:
+    mov [KeyPad+si], 0
+    inc si
+    loop @@PadZeros
+    
+@@cont:
+    xor si, si
+    mov cx, 64
+@@HmacCopyKey:
+    mov al, [Key+si]
+    xor al, 5ch
+    mov [oKeyPad+si], al
+    inc si
+    loop @@HmacCopyKey
+    xor si, si
+    mov cx, 64
+@@CopyFromKey:
+    mov al, [Key+si]
+    xor al, 36h
+    mov [iKeyPad+si], al
+    inc si
+    loop @@CopyFromKey
+
+    mov bl, [HKeyLen]
+    xor bh, bh
+    mov si, bx
+
+    ;--------------------------------------------------------------------
+    ;Preparing SHA1_Hash
+    ;--------------------------------------------------------------------
+    xor si, si
+    mov cx, 32 ;32 words = 64 bytes
+@@CopyI:
+    mov ax, [word ptr iKeyPad+si]
+    mov [word msgToHash+si], ax
+    add si, 2
+    loop @@CopyI
+    
+    mov bx, [HmacMsgOffset] ;the offset of the message is in HmacMsgOffset
+    mov cx, [word HmacMsgLen] ;length in bytes(!)
+@@CopyMsg:
+    mov al, [bx]
+    mov [msgToHash+si], al
+    inc si
+    inc bx
+    loop @@CopyMsg
+    
+    lea bx, [msgToHash]
+    mov [msg], bx
+    
+    mov ax, [word HmacMsgLen]
+    add ax, 64 ;64byte of iKeyPad
+    shl ax, 3 ;mul by 8 to convert length to bits
+    mov [InputLen], ax
+    
+    call SHA1_Hash
+    
+    xor si, si
+    mov cx, 32 ;32words = 64bytes
+@@CopyO:
+    mov ax, [word ptr oKeyPad+si]
+    mov [word msgToHash+si], ax
+    add si, 2
+    loop @@CopyO
+    
+    lea bx, [msgHash]
+    mov cx, 10
+@@CopyFirstHash:
+    mov ax, [word bx]
+    mov [word msgToHash+si], ax
+    add si, 2
+    add bx, 2
+    loop @@CopyFirstHash
+    
+    mov [InputLen], 84*8 ;84bytes in bits
+    
+    lea bx, [msgToHash]
+    mov [msg], bx
+    
+    call SHA1_Hash
+    
+    ret
+endp HMAC_SHA1
+    
+    
+
 
     
-    ; xor si, si
-; @@XorFirst32:
-    ; xor [oKeyPad+si], 0
-    ; xor [iKeyPad+si], 0
-    ; inc si
-    ; cmp si, 4 ;4bytes(first 32 bits)
-    ; jl @@XorFirst32
-    
-    ; xor [word oKeyPad], 17h
-    ; xor [word oKeyPad+2], 0
-    
-    ; xor [word iKeyPad], 0Dh
-    ; xor [word iKeyPad+2], 80h
     
     
-    
-    ; ret
-; endp HMAC_SHA1
-    
-    
-
-
-    
-    
-    
-;---------------------------------------------------------------
-;Input: OUTPUT_LEN = 160, InputLen = Input msg len in bits!!!
+;-------------------------------------------------------------------------
+;Input: OUTPUT_LEN = 160, 
+;           InputLen = Input msg len in bits!!!
 ;           msg = offset to the msg to hash, 
-;           msg_hash OUTPUT_LEN dup
+;           msgHash OUTPUT_LEN/8 dup
 ;           WorkBuff array length = 320 bytes
 ;
-;Output: hashed msg in msg_hash
-;---------------------------------------------------------------
+;Output: hashed msg in msgHash
+;-------------------------------------------------------------------------
 proc SHA1_Hash
     cmp [InputLen], 0
     jng @@NoMoreBlocks;not greater

@@ -1,3 +1,4 @@
+.486
 IDEAL
 MODEL small
 
@@ -27,18 +28,5 @@ FinishM:
     pop cx
 endm Mod32
 
-STACK 100h
 DATASEG
 CODESEG
-start:
-    mov ax, @data
-    mov ds, ax
-
-    mov dx, 16h
-    mov ax, 0E360h
-    Mod32 0Fh, 4240h
-    
-exit: 
-    mov ax, 4c00h
-    int 21h
-END start

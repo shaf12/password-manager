@@ -1,3 +1,4 @@
+.486
 IDEAL
 MODEL small
 
@@ -49,7 +50,6 @@ FinishM:
     pop cx
 endm Mul32
 
-STACK 100h
 DATASEG
 
 UNIX_TO_2019 = 1546300800
@@ -74,16 +74,8 @@ DaysInMonthLookup dw 0 ;illegal
 LeapYears dw 2020, 2024, 2028, 2032, 2036;, 2040, 2044, 2048, 2052, 2056, 2060 ;leap years lookup table.    
 
 CODESEG
-start:
-    mov ax, @data
-    mov ds, ax
 
-    call EpochTimeDiv30
-exit: 
-    mov ax, 4c00h
-    int 21h
-
-
+public EpochTimeDiv30
 proc EpochTimeDiv30
     push cx
     push bx
@@ -202,14 +194,4 @@ proc SecThisYearUTC
     ret
 endp SecThisYearUTC
 
-
-
-
-
-
-
-
-
-
-
-END start
+end
