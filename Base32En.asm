@@ -5,7 +5,7 @@ DATASEG
 
 ;
 BASE32_TABLE db "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-SecretBit db 2 dup('A', 'B', 'C', 'D', 'E'),'$' ; 5 characters(5 bytes ascii) * 2(2 dup) = 10 bytes = 80 bits(needed secret size before base32 encoding)
+SecretBit db "0000000000",'$';2 dup('A', 'B', 'C', 'D', 'E'),'$' ; 5 characters(5 bytes ascii) * 2(2 dup) = 10 bytes = 80 bits(needed secret size before base32 encoding)
 EndSecretBitLbl:
 
 InByteSize = 8
