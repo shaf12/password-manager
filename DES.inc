@@ -1,0 +1,5 @@
+codeseg
+procdesc DES_ENC
+procdesc DES_DEC
+procdesc GetOutputOffsetDES
+procdesc GetInputOffsetDES

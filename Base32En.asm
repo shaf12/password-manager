@@ -1,6 +1,6 @@
+.486
 IDEAL
 MODEL small
-STACK 100h
 DATASEG
 
 ;
@@ -15,31 +15,22 @@ SecretEnc db INPUT_LEN*8/5 dup('$'),'$' ; output code buffer
 ;
 
 CODESEG
-start:
-	mov ax, @data
-	mov ds, ax
-	Mov al, INPUT_LEN
-	call Base32Enc
-	
-	lea dx, [SecretBit]
+
+;---------------------------------------------------------------
+;Prints Base32 encoded SecretBit
+;---------------------------------------------------------------
+public PrintBase32
+proc PrintBase32
+
+    call Base32Enc
+    
+    lea dx, [SecretEnc]
 	mov ah, 9
 	int 21h
-	
-	mov dx,13
-	mov ah,2
-	int 21h  
-	mov dx,10
-	mov ah,2
-	int 21h
 
-	lea dx, [SecretEnc]
-	mov ah, 9
-	int 21h
-	
-exit: 
-	mov ax, 4c00h
-	int 21h
-
+    ret
+endp PrintBase32
+    
 ;----------------------------------------------------
 ;SecretBit = the 80 bit secret code 
 ;Output code - SecretEnc
@@ -158,10 +149,5 @@ proc Base32Enc
 @@FinishProc:	
 	ret
 endp Base32Enc
-	
-
-	
-	
-	
-	
-END start
+		
+END

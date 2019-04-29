@@ -2,44 +2,6 @@
 IDEAL
 MODEL small
 
-macro Print32 number
-local println, loopr
-
-    push eax
-    push edx
-    push ebx
-    push si
-    mov cx,0
-    mov eax,number
-    mov ebx, 10
- loopr:  
-    xor edx, edx
-    div ebx         ; eax <- eax/10, edx <- eax % 10
-    add dl, '0'     ; edx to ASCII
-    push dx
-    inc cx
-    cmp eax, 0
-    jnz loopr
-
-    println:
-    pop dx
-    mov ah, 2h
-    int 21h
-    dec cx
-    jnz println
-
-    mov dl, 13d     ;Carriage Return
-    mov ah, 2h
-    int 21h
-    mov dl, 10d     ;Line Feed
-    mov ah, 2h
-    int 21h
-
-    pop si
-    pop edx
-    pop eax
-endm Print32
-
 ;DX:AX left shift (32 bit)
 MACRO ROL32
     shl dx, 1
@@ -124,9 +86,7 @@ FinishM:
 endm Mod32
 
 
-
-STACK 100h
-include "util.inc"
+include "unix.inc"
 DATASEG
 
 h0 dd 0
@@ -168,31 +128,31 @@ HmacMsg db 8 dup (?)
 HmacMsgLen db ? ;in bytes!!!
 CODESEG
 
-start:
-    mov ax, @data
-    mov ds, ax
+; start:
+    ; mov ax, @data
+    ; mov ds, ax
     
-    ; call EpochTimeDiv30
+    ; ; call EpochTimeDiv30
     
-    ; lea bx, [Key]
-    ; lea bx, [HmacMsgOffset]
-    ; lea bx, [HKeyLen]
+    ; ; lea bx, [Key]
+    ; ; lea bx, [HmacMsgOffset]
+    ; ; lea bx, [HKeyLen]
     
-    ; mov [HKeyLen], 10
-    ; mov [HmacMsgLen], 4
-    ; lea bx, [HmacMsg]
-    ; mov [HmacMsgOffset], bx
-    ; call HMAC_SHA1
-    ; lea dx, [msgHash]
+    ; ; mov [HKeyLen], 10
+    ; ; mov [HmacMsgLen], 4
+    ; ; lea bx, [HmacMsg]
+    ; ; mov [HmacMsgOffset], bx
+    ; ; call HMAC_SHA1
+    ; ; lea dx, [msgHash]
 
-    call GoogleAuthenticator ;num is in dx:ax
-    shl edx, 16
-    mov dx, ax
-    Print32 edx
+    ; call GoogleAuthenticator ;num is in dx:ax
+    ; shl edx, 16
+    ; mov dx, ax
+    ; Print32 edx
     
-exit: 
-    mov ax, 4c00h
-    int 21h
+; exit: 
+    ; mov ax, 4c00h
+    ; int 21h
 
 ;---------------------------------------------------------------------------------------
 ;Input: Key = secret 10bytes key
@@ -200,7 +160,11 @@ exit:
 ;
 ;
 ;---------------------------------------------------------------------------------------
+public GoogleAuthenticator
 proc GoogleAuthenticator
+    push cx
+    push bx
+    push si
     call EpochTimeDiv30
     xchg dh, dl ;we need big endian
     xchg ah, al
@@ -225,6 +189,10 @@ proc GoogleAuthenticator
     and dh, 7Fh ;removing the most significant bit(MSB)
     
     Mod32 0Fh, 4240h
+    
+    pop si
+    pop bx
+    pop cx
     ret
 endp GoogleAuthenticator    
     
@@ -876,4 +844,4 @@ endp SHA1_Hash
     
     
     
-END start
+END

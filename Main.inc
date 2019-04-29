@@ -1,0 +1,4 @@
+codeseg
+procdesc GoogleAuthenticator
+procdesc PrintBase32
+procdesc DES

@@ -1,4 +1,4 @@
-.186
+.486
 IDEAL
 MODEL small
 
@@ -26,7 +26,7 @@ MACRO load g_add, w_add
     mov [w_address], bx
 ENDM load
 
-STACK 100h
+
 DATASEG
 ; ------------------------------------------
 ; DES DATA
@@ -58,22 +58,6 @@ DATASEG
     KeyTemp1 db 7 dup(?) ; allocate 56bit(7bytes) for the permuted key
     KeyTemp2 db 7 dup(?) ; allocate 56bit(7bytes) for the permuted key
 
-    ; SubKey1 db 6 dup (?)
-    ; SubKey2 db 6 dup (?)
-    ; SubKey3 db 6 dup (?)
-    ; SubKey4 db 6 dup (?)
-    ; SubKey5 db 6 dup (?)
-    ; SubKey6 db 6 dup (?)
-    ; SubKey7 db 6 dup (?)
-    ; SubKey8 db 6 dup (?)
-    ; SubKey9 db 6 dup (?)
-    ; SubKey10 db 6 dup (?)
-    ; SubKey11 db 6 dup (?)
-    ; SubKey12 db 6 dup (?)
-    ; SubKey13 db 6 dup (?)
-    ; SubKey14 db 6 dup (?)
-    ; SubKey15 db 6 dup (?)
-    ; SubKey16 db 6 dup (?)
     
             db '1:'
     subKey1 db 6 dup (?)
@@ -112,6 +96,7 @@ DATASEG
     crntKN db ?
     
     TextBlock db 8 dup ('0');(87h,87h,87h,87h,87h,87h,87h,87h);(?) ;text
+    TextLen db ? ;Text length in bytes
     
     MapMask1 db 1h, 2h, 4h, 8h, 10h, 20h, 40h, 80h ;masks to isolate the bits(1st - 8th) - AND with the mask
     MapMask2    db 0FEh, 0FDh, 0FBh, 0F7h, 0EFh, 0DFh, 0BFh, 07Fh ;masks to clear a bit(1st - 8th) - AND with the mask
@@ -147,49 +132,103 @@ DATASEG
 ; End DES DATA
 ; ------------------------------------------
 CODESEG
-start:
-    mov ax, @data
-    mov ds, ax
+; start:
+    ; mov ax, @data
+    ; mov ds, ax
     
-    lea ax, [TextBlock]
-    lea ax, [OutputBlock]
+    ; lea ax, [TextBlock]
+    ; lea ax, [OutputBlock]
+    ; mov [TextLen], 5
     
+    ; mov [isEnc], 1
+    ; call KS
+    ; call DES
+    
+    ; ;mov [TextLen], 8
+    ; mov ax, [word OutputBlock]
+    ; mov [word TextBlock], ax
+    ; mov ax, [word OutputBlock+2]
+    ; mov [word TextBlock+2], ax
+    ; mov ax, [word OutputBlock+4]
+    ; mov [word TextBlock+4], ax
+    ; mov ax, [word OutputBlock+6]
+    ; mov [word TextBlock+6], ax
+    
+    ; mov [isEnc], 0
+    ; call KS
+    ; call DES
+
+; exit: 
+    ; mov ax, 4c00h
+    ; int 21h
+
+public GetOutputOffsetDES
+PROC GetOutputOffsetDES
+    lea bx, [OutputBlock]
+    ret
+ENDP GetOutputOffsetDES
+    
+public GetInputOffsetDES    
+PROC GetInputOffsetDES
+    lea bx, [TextBlock]
+    ret
+ENDP GetInputOffsetDES
+
+public DES_ENC
+PROC DES_ENC ;Encrypt --> INPUT => TextBlock = text, al = Text length in bytes(1-8). OUTPUT => in OutputBlock
     mov [isEnc], 1
-    call KS
     call DES
-    
-    mov ax, [word OutputBlock]
-    mov [word TextBlock], ax
-    mov ax, [word OutputBlock+2]
-    mov [word TextBlock+2], ax
-    mov ax, [word OutputBlock+4]
-    mov [word TextBlock+4], ax
-    mov ax, [word OutputBlock+6]
-    mov [word TextBlock+6], ax
-    
+    ret
+ENDP DES_ENC
+
+
+public DES_DEC
+PROC DES_DEC ;Decrypt --> INPUT => TextBlock = text, al = Text length in bytes(1-8). OUTPUT => in OutputBlock
     mov [isEnc], 0
-    call KS
     call DES
-
-exit: 
-    mov ax, 4c00h
-    int 21h
-
+    ret
+ENDP DES_DEC
 
 ;------------------------------------------------
 ;INPUT:
 ;   isEnc =>  1 = Encrypt, 0 = Decrypt
+;   TextBlock = text
+;   TextLen = text len in bytes(1-8)
 ;OUTPUT:
 ;   OutputBlock => cipher text
 ;------------------------------------------------
 proc DES
+    pusha
+    
+    cmp [isEnc], 0
+    je @@NoPad ;No padding for encoding
+    
+    cmp [TextLen], 8
+    je @@NoPad
+    ja @@ExitProc ;unsigned check
+    call Pad
+@@NoPad:
     perm TextBlock, n_var, si, ip, 64d ;Initial permutation
     call FN ;Feistel network
     perm n_var, OutputBlock, si, ip_1, 64d ;Final permutation
+    
+@@ExitProc:
+    popa
     ret
 endp DES
     
 
+PROC Pad
+    mov cx, 8
+    sub cl, [TextLen]
+    
+@@loopPad:
+    mov si, 8
+    sub si, cx
+    mov [TextBlock+si], 0
+    loop @@loopPad
+    ret
+ENDP Pad
 
 
 ;------------------------------------------------------------------------------------------------
@@ -276,7 +315,7 @@ ENDP DRL
 
 PROC KS
         perm DES_Key, KeyTemp1, si, PC_1, 56
-    xor si, si
+        xor si, si
     KLoop:
         call DRL
         cmp [SHIFT + si], 2
@@ -518,4 +557,13 @@ PROC FN
     ret
 ENDP FN
     
-END start
+    
+
+    
+    
+    
+    
+    
+    
+    
+END
