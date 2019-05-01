@@ -95,7 +95,7 @@ DATASEG
 
     crntKN db ?
     
-    TextBlock db 8 dup ('0');(87h,87h,87h,87h,87h,87h,87h,87h);(?) ;text
+    TextBlock db 8 dup ('A');(87h,87h,87h,87h,87h,87h,87h,87h);(?) ;text
     TextLen db ? ;Text length in bytes
     
     MapMask1 db 1h, 2h, 4h, 8h, 10h, 20h, 40h, 80h ;masks to isolate the bits(1st - 8th) - AND with the mask
@@ -176,16 +176,24 @@ ENDP GetInputOffsetDES
 
 public DES_ENC
 PROC DES_ENC ;Encrypt --> INPUT => TextBlock = text, al = Text length in bytes(1-8). OUTPUT => in OutputBlock
-    mov [isEnc], 1
+    pusha
+	mov [isEnc], 1
+	mov [TextLen], al
+	call KS
     call DES
+	popa
     ret
 ENDP DES_ENC
 
 
 public DES_DEC
 PROC DES_DEC ;Decrypt --> INPUT => TextBlock = text, al = Text length in bytes(1-8). OUTPUT => in OutputBlock
+	pusha
     mov [isEnc], 0
+	mov [TextLen], al
+	call KS
     call DES
+	popa
     ret
 ENDP DES_DEC
 

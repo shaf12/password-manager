@@ -93,7 +93,7 @@ start:
 	mov ax, @data
 	mov ds, ax
 	
-    call MainTOTP
+    call Main
     
 	
 EXIT:
@@ -103,6 +103,14 @@ EXIT:
 ;---------------------------
 ; Procudures area
 ;---------------------------
+proc Main
+    call MainTOTP
+    call ManageAll
+    ret
+endp Main
+
+
+
 proc MainTOTP
 @@ProcStart:
     ClearScr

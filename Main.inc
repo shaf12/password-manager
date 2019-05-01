@@ -1,4 +1,5 @@
 codeseg
 procdesc GoogleAuthenticator
 procdesc PrintBase32
-procdesc DES
+procdesc ManageAll
+procdesc HashPass

@@ -196,7 +196,20 @@ proc GoogleAuthenticator
     ret
 endp GoogleAuthenticator    
     
-    
+;----------------------------------------------
+;INPUT: dx - offset to password
+;           si - password len in bytes
+;OUTPUT: dx - offset to hashed password
+;----------------------------------------------
+public HashPass
+proc HashPass
+    mov [msg], dx ;offset to msg
+    shl si, 8 ;convert bytes to bits
+    mov [InputLen], si
+    call SHA1_Hash
+    lea dx, [msgHash]
+    ret
+endp HashPass
     
 ;------------------------------------------------------------------------
 ;Key length must be less than BLOCK_SIZE(64bytes for SHA-1)
@@ -325,7 +338,7 @@ endp HMAC_SHA1
 ;Input: OUTPUT_LEN = 160, 
 ;           InputLen = Input msg len in bits!!!
 ;           msg = offset to the msg to hash, 
-;           msgHash OUTPUT_LEN/8 dup
+;           msgHash OUTPUT_LEN/8 dup(?)
 ;           WorkBuff array length = 320 bytes
 ;
 ;Output: hashed msg in msgHash

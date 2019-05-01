@@ -17,22 +17,43 @@ MACRO NEW_LINE
 	mov dl,10   ;  LF = Line Feed - go down to the next line
 	int 21h
 ENDM 
+
+MACRO TAB
+	mov dl,9   ; Tab
+	mov ah,2   
+	int 21h
+ENDM 
     
-     
+    
+MACRO Getch
+    mov ah, 1
+    int 21h
+ENDM Getch
+
+MACRO PrintNull
+    xor dl, dl ;null
+    mov ah, 2
+    int 21h
+ENDM PrintNull
+
 ; 2 constants
 LOG_2_BLOCK_SIZE EQU 3  ; must be 1 or more, not above 10 
 BLOCK_SIZE = 8   ; must be powerd of 2  ; 2 4 8 16 32 64 etc
 
+PASS_MAX_LEN = 8 ;Bytes
+NAME_MAX_LEN = 8 ;Bytes
+
 
 STACK 100h
-include "DES"
+include "DES.inc"
 DATASEG
 
     ErrorCreate db "Could not create file$" 
     ErrorWrite db "Could not write to file$" 
          
-    FileName db "Pass.txt",0
+    FileName db "pass.txt",0
     FileHandle dw ?
+    IsNew db 0 ;was the file already created before or right now
     
     ReadBuff db BLOCK_SIZE dup(?),'$' 
     
@@ -43,75 +64,169 @@ DATASEG
      
     FileLength dw ?
      
-     
+    ; EncBlock db "juventu"
+	; OutBlock db 8 dup(?)
+
+    NameToPass db " --> "
+    NameToPassLen = 5
+    CW db 10, 13, '$'
+    EnterName db 10,13, "Please enter the password name(max 8 characters): ", '$'
+    EnterPass db 10, 13, "Please enter the password(max 8 characters): ", '$'
+    
+    AnyMoreInput db 10, 13, "Do you have anything to add (Y/N)? ", '$'
+    
 
 CODESEG
- 
-start:                          
-    mov ax,@data             
-    mov ds,ax                
 
-    SHOW_MSG StartMsg
+; procdesc DES_ENC
+; procdesc DES_DEC
+; procdesc GetOutputOffsetDES
+; procdesc GetInputOffsetDES
+
+public ManageAll
+PROC ManageAll
+    mov al,2
+    call file_open_create
+    
+    call ManageInput
+    call PrintTxtDES
+    
+    call file_close
+    ret
+ENDP ManageAll
+
+
+PROC PrintTxtDES
+    call get_file_len
+    mov si, [FileLength]
+    NEW_LINE
+    call print_file_content_DES
+    ret
+ENDP PrintTxtDES     
+
+
+
+
+PROC ManageInput
+@@AnyInput:
+    SHOW_MSG AnyMoreInput
+    
+    Getch
+    cmp al, 'Y'
+    je @@MoreInput
+    cmp al, 'y'
+    je @@MoreInput
+    cmp al, 'N'
+    je @@NoInput
+    cmp al, 'n'
+    je @@NoInput
+    jmp @@AnyInput
+    
+@@MoreInput:
+    call OneInput
+    jmp @@AnyInput
+    
+@@NoInput:
+    
+    ret
+ENDP ManageInput
+
+PROC OneInput                
+;-----------------------------------Name-------------------------------------------------
+    SHOW_MSG EnterName
+    mov dl, NAME_MAX_LEN+1
+    call GetInput
+    
+    lea dx, [InputBuff+2]
+    mov ax, si
+    call PutInputDES
+    call DES_ENC
+    call GetOutputOffsetDES
+    mov dx, bx
+    mov si, 8
+    call write_to_file
+;-----------------------------------" --> "-------------------------------------------------
+    lea dx, [NameToPass]
+    mov al, NameToPassLen
+    call PutInputDES
+    call DES_ENC
+    call GetOutputOffsetDES
+    mov dx, bx
+    mov si, 8
+    call write_to_file
+;------------------------------------Password---------------------------------------------
+    SHOW_MSG EnterPass
+    mov dl, PASS_MAX_LEN
+    call GetInput
     NEW_LINE
     
+    lea dx, [InputBuff+2]
+    mov ax, si ;for DES len
+    call PutInputDES
+    call DES_ENC
+    call GetOutputOffsetDES
+    mov dx, bx
+    mov si, 8
+    call write_to_file
+;-----------------------------------New Line-----------------------------------------------
+    lea dx, [CW]
     mov al, 2
-    call file_open_create
-    mov bx, [FileHandle]
-    xor dx, dx
-    xor cx, cx
-    mov al, 2
-    mov ah, 042h
-    int 21h
-
+    call PutInputDES
+    call DES_ENC
+    call GetOutputOffsetDES
+    mov dx, bx
+    mov si, 8
+    call write_to_file
     
-    mov [InputBuff], 20 ;read max 20 bytes from user
-loopy:
-    mov dx, offset InputBuff
-    mov ah, 0ah
-    int 21h
+    
+    ret
+ENDP OneInput
+
+
+;-------------------------------------------------------------
+;dx = offset to input
+;si = length
+;copy al bytes from dx, to the DES input buffer
+;-------------------------------------------------------------
+PROC PutInputDES
+    pusha
+    push es
+    
+    push ds
+    pop es ;for movsb
+    
+    mov cx, si
+    mov si, dx
+    call GetInputOffsetDES
+    mov di, bx
+    
+    rep movsb
+    
+    pop es
+    popa
+    ret
+ENDP PutInputDES
+
+;INPUT --> dl = input max
+;OUTPUT --> si = output len, dx = offset to output string ("...", '$')
+PROC GetInput
     push dx
     push ax
-    NEW_LINE
-    pop ax
-    pop dx
-    mov al, [byte InputBuff+1]
+    
+    mov [InputBuff], dl
+    lea dx, [InputBuff]
+    mov ah, 0ah
+    int 21h
+    mov al, [byte ptr InputBuff+1]
     xor ah, ah
     mov si, ax
     
-    cmp si, 3
-    jne write ;Means that its not "end" because the length > 3
-    cmp [byte InputBuff+2], 'e'
-    jne write
-    cmp [byte InputBuff+3], 'n'
-    jne write
-    cmp [byte InputBuff+4], 'd'
-    jne write
-    jmp finishMain
-write:
-    add dx, 2 ;skip the "XX" of the start in InputBuff
-    call write_to_file
-    mov dx, offset CW
-    mov si, 2
-    call write_to_file
-    jmp loopy
-    
-finishMain:
-    SHOW_CHAR '<'
-    call get_file_len
-    mov si, [FileLength]
-    call print_file_content
-    SHOW_CHAR '>'
-    SHOW_MSG EndMsg
-    NEW_LINE
-    
-exit:   
-    mov ax,4C00h
-    int 21h
-                  
+    pop ax
+    pop dx
+    ret
+ENDP GetInput
 
 
-                  
-                  
 ;================================================
 ; Description -  
 ;
@@ -132,8 +247,8 @@ proc file_open_no_create
     mov [FileHandle], ax
     jmp @@finish
 @@error:
-    SHOW_CHAR 'E'
-    SHOW_CHAR 'C'
+    ;SHOW_CHAR 'E'
+    ;SHOW_CHAR 'C'
 @@finish:
     pop dx
     pop ax
@@ -200,7 +315,7 @@ endp file_close
 ;                
 ; INPUT: FileHandle = handle
         
-; OUTPUT:  
+; OUTPUT:  [FileLength] = file length
 ; Register Usage:
 ;================================================                
 proc get_file_len
@@ -281,7 +396,9 @@ BuufSizeMatch:
 
     mov bx, [FileHandle]
 ReadNextBlock:
-    push cx 
+    push cx
+    push bx
+    
     mov dx,offset ReadBuff
     mov cx , BLOCK_SIZE  ; read blocks of BLOCK_SIZE bytes
     mov ah,3Fh
@@ -295,12 +412,22 @@ PrintIt:
     call GetInputOffsetDES
     xor si, si
     mov cx, ax
-@@lCopy:
+@@lCopyInput:
     mov dl, [ReadBuff+si]
     mov [bx+si], dl
     inc si
-    loop @@lCopy
+    loop @@lCopyInput
     call DES_DEC
+	
+	call GetOutputOffsetDES
+	xor si, si
+	mov cx, ax
+@@lCopyOutput:
+    mov dl,[bx+si]
+    mov [ReadBuff+si], dl
+    inc si
+    loop @@lCopyOutput
+
     mov si,ax
     call print_buffer
     
@@ -308,7 +435,7 @@ PrintIt:
     ;mov  [ReadBuff+si],'$'
     ;mov ah,9
     ;int 21h
-
+    pop bx
     pop cx
     loop ReadNextBlock
 
@@ -328,11 +455,14 @@ proc print_buffer
     mov cx,si
     cmp cx,0
     jz @@ret
-    mov si ,0
+    xor si ,si
 @@Next_Byte:
     mov dl,[byte ReadBuff+si]
+    cmp dl, 0
+    je @@null
     mov ah,2
     int 21h
+    @@null:
     inc si
     loop @@Next_Byte
 
@@ -344,74 +474,4 @@ proc print_buffer
 endp print_buffer
 
 
-
-;================================================
-; Description - Write on screen the value of ax (decimal)
-;               the practice :  
-;               Divide AX by 10 and put the Mod on stack 
-;               Repeat Until AX smaller than 10 then print AX (MSB) 
-;               then pop from the stack all what we kept there and show it. 
-; INPUT: AX
-; OUTPUT: Screen 
-; Register Usage: AX  
-;================================================
-proc ShowAxDecimal
-       push ax
-       push bx
-       push cx
-       push dx
-       jmp PositiveAx
-       ; check if negative
-       test ax,08000h
-       jz PositiveAx
-            
-       ;  put '-' on the screen
-       push ax
-       mov dl,'-'
-       mov ah,2
-       int 21h
-       pop ax
-
-       neg ax ; make it positive
-PositiveAx:
-       mov cx,0   ; will count how many time we did push 
-       mov bx,10  ; the divider
-   
-put_mode_to_stack:
-       xor dx,dx
-       div bx
-       add dl,30h
-       ; dl is the current LSB digit 
-       ; we cant push only dl so we push all dx
-       push dx    
-       inc cx
-       cmp ax,9   ; check if it is the last time to div
-       jg put_mode_to_stack
-
-       cmp ax,0
-       jz pop_next  ; jump if ax was totally 0
-       add al,30h  
-       mov dl, al    
-       mov ah, 2h
-       int 21h        ; show first digit MSB
-           
-pop_next: 
-       pop ax    ; remove all rest LIFO (reverse) (MSB to LSB)
-       mov dl, al
-       mov ah, 2h
-       int 21h        ; show all rest digits
-       loop pop_next
-        
-       mov dl, ','
-       mov ah, 2h
-       int 21h
-   
-       pop dx
-       pop cx
-       pop bx
-       pop ax
-       
-       ret
-endp ShowAxDecimal
-
-End start
+End
