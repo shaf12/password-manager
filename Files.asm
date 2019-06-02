@@ -51,7 +51,8 @@ DATASEG
     ErrorCreate db "Could not create file$" 
     ErrorWrite db "Could not write to file$" 
          
-    FileName db "pass.txt",0
+    FileName db "pass.enc",0
+    
     FileHandle dw ?
     IsNew db 0 ;was the file already created before or right now
     

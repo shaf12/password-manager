@@ -6,11 +6,8 @@ DATASEG
 ;
 BASE32_TABLE db "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 SecretBit db "0000000000",'$';2 dup('A', 'B', 'C', 'D', 'E'),'$' ; 5 characters(5 bytes ascii) * 2(2 dup) = 10 bytes = 80 bits(needed secret size before base32 encoding)
-EndSecretBitLbl:
+INPUT_LEN = SIZE SecretBit
 
-InByteSize = 8
-OutByteSize = 5
-INPUT_LEN = EndSecretBitLbl - SecretBit -1
 SecretEnc db INPUT_LEN*8/5 dup('$'),'$' ; output code buffer
 ;
 
@@ -32,12 +29,17 @@ proc PrintBase32
 endp PrintBase32
     
 ;----------------------------------------------------
-;SecretBit = the 80 bit secret code 
+;SecretBit = secret code
+;INPUT_LEN = SIZE SecretBit
+; 
 ;Output code - SecretEnc
-;dont use for more than 15bytes code
-;Important - Input has to be a multiply of 8
+;
+;***Important - Input length in bytes has to be a multiply of 5
 ;----------------------------------------------------
 proc Base32Enc
+    InByteSize = 8
+    OutByteSize = 5
+
 	xor dh, dh
 	xor bx, bx
 	mov cl, 8 ;Initialize 8 left bits at start(on start we have all the byte left)

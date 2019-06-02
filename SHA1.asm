@@ -126,6 +126,7 @@ iPadXor db BLOCK_SIZE dup (36h)
 HmacMsgOffset dw ? ;offset to msg
 HmacMsg db 8 dup (?)
 HmacMsgLen db ? ;in bytes!!!
+;--------------------------------------------------------------------
 CODESEG
 
 ; start:
@@ -204,7 +205,7 @@ endp GoogleAuthenticator
 public HashPass
 proc HashPass
     mov [msg], dx ;offset to msg
-    shl si, 8 ;convert bytes to bits
+    shl si, 3 ;convert bytes to bits
     mov [InputLen], si
     call SHA1_Hash
     lea dx, [msgHash]

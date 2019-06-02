@@ -48,7 +48,7 @@ Loop2:
 FinishM:
     pop si
     pop cx
-endm Mul32
+endm AxDaysToSeconds
 
 DATASEG
 
