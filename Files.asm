@@ -159,7 +159,7 @@ PROC OneInput
     call write_to_file
 ;------------------------------------Password---------------------------------------------
     SHOW_MSG EnterPass
-    mov dl, PASS_MAX_LEN
+    mov dl, PASS_MAX_LEN+1
     call GetInput
     NEW_LINE
     
