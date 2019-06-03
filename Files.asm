@@ -237,25 +237,6 @@ ENDP GetInput
 ; OUTPUT:   if success FileHandle = handle, if not ax = error code and CF is on
 ; Register Usage: none
 ;================================================                 
-proc file_open_no_create
-    push ax
-    push dx
-    
-    mov DX, offset FileName
-    mov ah, 03Dh
-    int 21h
-    jc @@error
-    mov [FileHandle], ax
-    jmp @@finish
-@@error:
-    ;SHOW_CHAR 'E'
-    ;SHOW_CHAR 'C'
-@@finish:
-    pop dx
-    pop ax
-    
-    ret
-endp file_open_no_create
 
 ;Same but creates a new file if current is missing
 proc file_open_create
@@ -274,6 +255,7 @@ proc file_open_create
     int 21h
     jc @@finishError
     mov [FileHandle], ax
+    mov [IsNew], 1
     jmp @@endproc
 @@finishError:
     SHOW_MSG ErrorCreate
