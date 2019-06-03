@@ -50,8 +50,9 @@ DATASEG
 
     ErrorCreate db "Could not create file$" 
     ErrorWrite db "Could not write to file$" 
-         
-    FileName db "pass.enc",0
+    ErrorGotoEnd db "Couldn't move to the end of the file"
+    
+    FileName db "pass.N&C",0
     
     FileHandle dw ?
     IsNew db 0 ;was the file already created before or right now
@@ -88,6 +89,7 @@ public ManageAll
 PROC ManageAll
     mov al,2
     call file_open_create
+    call GotoEndFile
     
     call ManageInput
     call PrintTxtDES
@@ -227,6 +229,28 @@ PROC GetInput
     ret
 ENDP GetInput
 
+
+;=================================================
+;FileHandle = file handle
+;
+;OUTPUT - 	AX = error code if CF set
+;	                DX:AX = new pointer location if CF not set
+;=================================================
+proc GotoEndFile
+    pusha
+    mov ah, 42h
+    mov al, 2
+    mov bx, [FileHandle]
+    xor dx, dx
+    xor cx, cx
+    int 21h
+    jnc @@Finish ;if there was no error
+@@Error:
+    SHOW_MSG ErrorGotoEnd
+@@Finish:
+    popa
+    ret
+endp GotoEndFile
 
 ;================================================
 ; Description -  
