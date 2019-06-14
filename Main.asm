@@ -73,7 +73,7 @@ proc Main
 endp Main
 
 
-
+;Manages TOTP input and authentication
 proc MainTOTP
 @@ProcStart:
     ClearScr

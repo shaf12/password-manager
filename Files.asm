@@ -85,6 +85,10 @@ CODESEG
 ; procdesc GetOutputOffsetDES
 ; procdesc GetInputOffsetDES
 
+
+;===============================================
+;Manages input from user, DES encrypting/decrypting and file read/write
+;===============================================
 public ManageAll
 PROC ManageAll
     mov al,2
@@ -98,7 +102,9 @@ PROC ManageAll
     ret
 ENDP ManageAll
 
-
+;==============================================
+;Decrypts and prints the file content
+;==============================================
 PROC PrintTxtDES
     call get_file_len
     mov si, [FileLength]
@@ -109,7 +115,9 @@ ENDP PrintTxtDES
 
 
 
-
+;===============================================
+;Manages Input(decryption + writing to file)
+;===============================================
 PROC ManageInput
 @@AnyInput:
     SHOW_MSG AnyMoreInput
@@ -323,7 +331,7 @@ endp file_close
 ; INPUT: FileHandle = handle
         
 ; OUTPUT:  [FileLength] = file length
-; Register Usage:
+; Register Usage: none
 ;================================================                
 proc get_file_len
     push ax
@@ -362,7 +370,7 @@ endp get_file_len
 ;       si = bytes to write
 ;       dx = offset to write buffer
 ; OUTPUT:  -
-; Register Usage: -
+; Register Usage: cx, si, bx
 ;================================================                
 proc write_to_file
     
@@ -382,13 +390,14 @@ endp write_to_file
 
 
 
-; Proc - print content of the file from current file position
-; The proc reads blocks of BLOCK_SIZE bytes each time (except the last block)
+; Proc - decrypt and print content of the file from current file position
+; The proc reads blocks of 8 bytes each time (except the last block), decrypts it and prints
 ; Input - SI how many chars to try read
 ; Proc assumes: 1. there is array DS:ReadBuff , size : BLOCK_SIZE  
 ;           2. file should already be opened and this proc will not close it
 ;           3.  variable FileHandle (word) contains a valid handle to the opened file 
-;       
+;       BLOCK_SIZE = 8
+;       LOG_2_BLOCK_SIZE = 3
 proc print_file_content_DES
 
     cmp si,0   ; Si = File length from start

@@ -108,7 +108,7 @@ endp EpochTimeDiv30
     
     
 ;--------------------------------------------
-;Calcultate the amout of secondss since January 1st of the current year
+;Calcultate the amout of seconds since January 1st of the current year
 ;OUTPUT: dx = days
 ;--------------------------------------------
 proc SecThisYear

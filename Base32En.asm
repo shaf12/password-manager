@@ -32,9 +32,9 @@ endp PrintBase32
 ;SecretBit = secret code
 ;INPUT_LEN = SIZE SecretBit
 ; 
-;Output code - SecretEnc
+;Output: encoded string in SecretEnc
 ;
-;***Important - Input length in bytes has to be a multiply of 5
+;***Important - Input length in bytes has to be a multiply of 5 bits
 ;----------------------------------------------------
 proc Base32Enc
     InByteSize = 8
