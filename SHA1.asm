@@ -88,7 +88,8 @@ endm Mod32
 
 include "unix.inc"
 DATASEG
-
+;========================================
+;SHA1
 h0 dd 0
 h1 dd 0
 h2 dd 0
@@ -128,32 +129,6 @@ HmacMsg db 8 dup (?)
 HmacMsgLen db ? ;in bytes!!!
 ;--------------------------------------------------------------------
 CODESEG
-
-; start:
-    ; mov ax, @data
-    ; mov ds, ax
-    
-    ; ; call EpochTimeDiv30
-    
-    ; ; lea bx, [Key]
-    ; ; lea bx, [HmacMsgOffset]
-    ; ; lea bx, [HKeyLen]
-    
-    ; ; mov [HKeyLen], 10
-    ; ; mov [HmacMsgLen], 4
-    ; ; lea bx, [HmacMsg]
-    ; ; mov [HmacMsgOffset], bx
-    ; ; call HMAC_SHA1
-    ; ; lea dx, [msgHash]
-
-    ; call GoogleAuthenticator ;num is in dx:ax
-    ; shl edx, 16
-    ; mov dx, ax
-    ; Print32 edx
-    
-; exit: 
-    ; mov ax, 4c00h
-    ; int 21h
 
 ;---------------------------------------------------------------------------------------
 ;Input: Key = secret 10bytes key
@@ -223,22 +198,6 @@ endp HashPass
 ;iKeyPad db 64 dup (?)
 ;------------------------------------------------------------------------
 proc HMAC_SHA1
-    ; cmp KEY_LEN, BLOCK_SIZE
-    ; jna @@cont1
-    ; xor si, si
-    ; mov cx, KEY_LEN
-; @@CopyFromKey:
-    ; mov ax, [Key+si]
-    ; mov [msg+si], ax
-    ; inc si
-    ; loop @@CopyFromKey
-    
-    ; SHA1_Hash
-
-    ; mov cx,
-; @@CopyToKey:
-
-;@@cont1:
     cmp [HKeyLen], BLOCK_SIZE
     jnb @@cont
     xor si, si
