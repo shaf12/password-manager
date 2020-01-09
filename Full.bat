@@ -1,7 +1,7 @@
-tasm /zi DES.asm
-tasm /zi Files.asm
-tasm /zi Base32En.asm
-tasm /zi UNIXts.asm
-tasm /zi SHA1.asm
-tasm /zi Main.asm
-tlink /v Main.obj SHA1.obj UNIXts.obj Base32En.obj Files.obj DES.obj
+BIN\tasm /zi DES.asm
+BIN\tasm /zi Files.asm
+BIN\tasm /zi Base32En.asm
+BIN\tasm /zi UNIXts.asm
+BIN\tasm /zi SHA1.asm
+BIN\tasm /zi Main.asm
+BIN\tlink /v Main.obj SHA1.obj UNIXts.obj Base32En.obj Files.obj DES.obj

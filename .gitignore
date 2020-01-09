@@ -1,6 +1,10 @@
 *.map
+*.MAP
 *.exe
+*.EXE
 *.obj
+*.OBJ
 *.tr
-pass.N&C
+*.TR
+*.N&C
 /BIN
