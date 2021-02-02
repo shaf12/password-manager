@@ -52,9 +52,8 @@ endm AxDaysToSeconds
 
 DATASEG
 
-UNIX_TO_2019 = 1546300800
-UNIX_TO_2020 =  1577836800
-BaseTime dd UNIX_TO_2020
+UNIX_TO_2021 =  1609459200
+BaseTime dd UNIX_TO_2021
 TIME_ZONE = 2
 SEC_TIME_ZONE = 3600*TIME_ZONE
 
@@ -82,7 +81,7 @@ proc EpochTimeDiv30
     push bx
     
     mov cx, [word ptr BaseTime+2]
-    mov bx, [word ptr BaseTime] ;cx:bx = UNIX_TO_2019
+    mov bx, [word ptr BaseTime] ;cx:bx = UNIX_TO_2021
     call SecThisYearUTC
     add ax, bx
     adc dx, cx
